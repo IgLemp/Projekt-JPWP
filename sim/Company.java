@@ -1,26 +1,25 @@
 package com.transport.sim;
 
 import java.util.*;
+import lombok.Getter;
+import lombok.Setter;
 
 public class Company {
-    private double cash;
-    private double fuelPrice = 1.8; // per unit
+    @Getter private double cash;
+    @Getter @Setter private double fuelPrice = 1.8; // per unit
     private List<Vehicle> vehicles = new ArrayList<>();
-    private List<Driver> drivers = new ArrayList<>();
-    private List<Job> jobs = new ArrayList<>();
+    @Getter private List<Driver> drivers = new ArrayList<>();
+    @Getter private List<Job> jobs = new ArrayList<>();
     private Map<Integer, Double> history = new HashMap<>();
     private Random rng = new Random();
 
     // candidate pool for hires
-    private List<DriverCandidate> candidates = new ArrayList<>();
+    @Getter private List<DriverCandidate> candidates = new ArrayList<>();
     // vehicle market
-    private List<VehicleOffer> vehicleMarket = new ArrayList<>();
+    @Getter private List<VehicleOffer> vehicleMarket = new ArrayList<>();
 
     public Company(double initialCash) { this.cash = initialCash; }
-    public double getCash() { return cash; }
     public void addCash(double delta) { cash += delta; }
-    public double getFuelPrice() { return fuelPrice; }
-    public void setFuelPrice(double p) { fuelPrice = Math.max(0.1, p); }
 
     public void addVehicle(Vehicle v) { vehicles.add(v); }
     public void removeVehicle(Vehicle v) { vehicles.remove(v); }
@@ -29,11 +28,9 @@ public class Company {
 
     public void addDriver(Driver d) { drivers.add(d); }
     public void removeDriver(Driver d) { drivers.remove(d); }
-    public List<Driver> getDrivers() { return drivers; }
     public Driver getRandomDriver() { if (drivers.isEmpty()) return null; return drivers.get(rng.nextInt(drivers.size())); }
 
     public void addJob(Job j) { jobs.add(j); }
-    public List<Job> getJobs() { return jobs; }
 
     public void recordTurn(int turn) { history.put(turn, cash); }
     public Map<Integer, Double> getHistory() { return history; }
@@ -57,7 +54,6 @@ public class Company {
     }
 
     // Candidate pool logic
-    public List<DriverCandidate> getCandidates() { return candidates; }
 
     public void refreshCandidatePool() {
         candidates.clear();
@@ -78,7 +74,6 @@ public class Company {
     }
 
     // Vehicle market
-    public List<VehicleOffer> getVehicleMarket() { return vehicleMarket; }
 
     public void refreshVehicleMarket() {
         vehicleMarket.clear();

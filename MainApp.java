@@ -2,6 +2,7 @@ package com.transport;
 
 import com.transport.ui.UIFactory;
 import com.transport.sim.Simulator;
+import com.transport.sim.Vehicle;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;

@@ -2,11 +2,14 @@ package com.transport.sim;
 
 import java.util.*;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class VehicleOffer {
-    private String name;
-    private int condition;
-    private double price;
-    private double fuelConsumption;
+    @Getter private String name;
+    @Getter private int condition;
+    @Getter private double price;
+    @Getter private double fuelConsumption;
 
     private static final String[] MODELS = {"Truck X","Truck Y","Van Z","Lorry 2000","Mover 7"};
     private static final Random rng = new Random();
@@ -14,11 +17,6 @@ public class VehicleOffer {
     public VehicleOffer(String name, int condition, double price, double fuelConsumption) {
         this.name = name; this.condition = condition; this.price = price; this.fuelConsumption = fuelConsumption;
     }
-
-    public String getName() { return name; }
-    public int getCondition() { return condition; }
-    public double getPrice() { return price; }
-    public double getFuelConsumption() { return fuelConsumption; }
 
     public static VehicleOffer randomOffer() {
         String n = MODELS[rng.nextInt(MODELS.length)] + "-" + (100 + rng.nextInt(900));

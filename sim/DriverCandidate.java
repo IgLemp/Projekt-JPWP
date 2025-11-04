@@ -1,11 +1,12 @@
 package com.transport.sim;
 
 import java.util.*;
+import lombok.Getter;
 
 public class DriverCandidate {
-    private String name;
-    private int skill;
-    private double hireCost;
+    @Getter private String name;
+    @Getter private int skill;
+    @Getter private double hireCost;
 
     private static final String[] FIRST = {"Adam","Piotr","Marek","Krzysztof","Paweł","Jakub","Łukasz","Tomasz","Mateusz","Szymon"};
     private static final String[] LAST = {"Nowak","Kowalski","Wiśniewski","Wójcik","Kowalczyk","Kamiński","Lewandowski","Zieliński"};
@@ -14,10 +15,6 @@ public class DriverCandidate {
     public DriverCandidate(String name, int skill, double hireCost) {
         this.name = name; this.skill = skill; this.hireCost = hireCost;
     }
-
-    public String getName() { return name; }
-    public int getSkill() { return skill; }
-    public double getHireCost() { return hireCost; }
 
     public static DriverCandidate randomCandidate() {
         String name = FIRST[rng.nextInt(FIRST.length)] + " " + LAST[rng.nextInt(LAST.length)];

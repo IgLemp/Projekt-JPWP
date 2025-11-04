@@ -2,18 +2,19 @@ package com.transport.sim;
 
 import java.util.*;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class Simulator {
-    private Company company;
+    @Getter private Company company;
     private Random rng = new Random();
-    private int turn = 0;
+    @Getter private int turn = 0;
     private List<Job> completedThisTurn = new ArrayList<>();
 
     public Simulator() {
         this.company = new Company(15000.0); // start budget
     }
 
-    public Company getCompany() { return company; }
-    public int getTurn() { return turn; }
     public List<Job> getCompletedThisTurn() { return new ArrayList<>(completedThisTurn); }
 
     public void initSampleData() {
