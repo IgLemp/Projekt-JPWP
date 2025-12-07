@@ -24,7 +24,7 @@ public class UIFactory {
         Button btnDrivers = new Button("Kierowcy");
         Button btnJobs = new Button("Zlecenia");
         Button btnReport = new Button("Raport");
-        Button btnNext = new Button("➤ Następna tura");
+        Button btnNext = new Button("> Następna tura");
         nav.getChildren().addAll(btnFleet, btnDrivers, btnJobs, btnReport, btnNext);
 
         // Log area
@@ -267,17 +267,17 @@ public class UIFactory {
 
                 // Double-booking check
                 if (busyDrivers.contains(selDriver) && !(j.isAssigned() && j.getAssignedDriver() == selDriver)) {
-                    log.appendText("❌ " + selDriver.getName() + " jest już zajęty innym zleceniem!\n");
+                    log.appendText("X " + selDriver.getName() + " jest już zajęty innym zleceniem!\n");
                     return;
                 }
                 if (busyVehicles.contains(selVehicle) && !(j.isAssigned() && j.getAssignedVehicle() == selVehicle)) {
-                    log.appendText("❌ " + selVehicle.getName() + " jest już w użyciu przy innym zleceniu!\n");
+                    log.appendText("X " + selVehicle.getName() + " jest już w użyciu przy innym zleceniu!\n");
                     return;
                 }
 
                 j.assign(selDriver, selVehicle);
                 log.appendText(String.format(
-                    "✅ Zlecenie '%s' przypisane: %s + %s (ETA %d)\n",
+                    "- Zlecenie '%s' przypisane: %s + %s (ETA %d)\n",
                     j.getTitle(), selDriver.getName(), selVehicle.getName(), j.getTurnsRemaining()
                 ));
                 refreshJobsView(view, sim, log);
