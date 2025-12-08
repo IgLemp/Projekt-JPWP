@@ -90,5 +90,14 @@ public class Company {
         }
         return false;
     }
+
+    // Job market
+    public void refreshJobMarket() {
+        jobs.clear();
+        int count = 3 + rng.nextInt(3); // 3-5 jobs
+        for (int i = 0; i < count; i++) {
+            jobs.add(Job.randomJob());
+        }
+    }
 }
 

@@ -48,6 +48,7 @@ public class Simulator {
         // Refresh candidate pool and vehicle market each turn
         company.refreshCandidatePool();
         company.refreshVehicleMarket();
+        company.refreshJobMarket();
         log.append("Odświeżono pulę kandydatów i rynek pojazdów.\n");
 
         // Scheduled maintenance

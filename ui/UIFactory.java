@@ -188,7 +188,7 @@ public class UIFactory {
         }
 
         view.getChildren().add(new Separator());
-        view.getChildren().add(button("Odśwież pulę kandydatów", () -> { sim.getCompany().refreshCandidatePool(); log.appendText("Pulę kandydatów odświeżono\n"); refreshDriversView(view, sim, log); }));
+        // view.getChildren().add(button("Odśwież pulę kandydatów", () -> { sim.getCompany().refreshCandidatePool(); log.appendText("Pulę kandydatów odświeżono\n"); refreshDriversView(view, sim, log); }));
         view.getChildren().add(new Label("Kandydaci do zatrudnienia:"));
 
         for (DriverCandidate c : sim.getCompany().getCandidates()) {
@@ -297,11 +297,11 @@ public class UIFactory {
         }
 
         view.getChildren().add(new Separator());
-        view.getChildren().add(button("Dodaj losowe zlecenie", () -> {
-            Job nj = new Job("Ad-hoc", 300 + new Random().nextInt(800), 20 + new Random().nextInt(400));
-            sim.getCompany().addJob(nj);
-            refreshJobsView(view, sim, log);
-        }));
+        // view.getChildren().add(button("Dodaj losowe zlecenie", () -> {
+        //     Job nj = new Job("Ad-hoc", 300 + new Random().nextInt(800), 20 + new Random().nextInt(400));
+        //     sim.getCompany().addJob(nj);
+        //     refreshJobsView(view, sim, log);
+        // }));
     }
 
     // -------------------------------------------------------------
