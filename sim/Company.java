@@ -24,7 +24,11 @@ public class Company {
     public void addVehicle(Vehicle v) { vehicles.add(v); }
     public void removeVehicle(Vehicle v) { vehicles.remove(v); }
     public List<Vehicle> getVehicles() { return vehicles; }
-    public Vehicle getRandomVehicle() { if (vehicles.isEmpty()) return null; return vehicles.get(rng.nextInt(vehicles.size())); }
+    
+    public Vehicle getRandomVehicle() { 
+        if (vehicles.isEmpty()) return null; 
+        return vehicles.get(rng.nextInt(vehicles.size())); 
+    }
 
     public void addDriver(Driver d) { drivers.add(d); }
     public void removeDriver(Driver d) { drivers.remove(d); }
@@ -34,6 +38,22 @@ public class Company {
 
     public void recordTurn(int turn) { history.put(turn, cash); }
     public Map<Integer, Double> getHistory() { return history; }
+
+    // --- LOGIC HELPERS ---
+    
+    public boolean isDriverBusy(Driver d) {
+        return jobs.stream().anyMatch(j -> j.isAssigned() && !j.isCompleted() && j.getAssignedDriver() == d);
+    }
+
+    public boolean isVehicleBusy(Vehicle v) {
+        return jobs.stream().anyMatch(j -> j.isAssigned() && !j.isCompleted() && j.getAssignedVehicle() == v);
+    }
+
+    public Driver getDriverForVehicle(Vehicle v) {
+        return drivers.stream().filter(d -> d.getAssignedVehicle() == v).findFirst().orElse(null);
+    }
+
+    // ---------------------
 
     // purchase vehicle if enough cash
     public boolean purchaseVehicle(Vehicle v) {
@@ -49,12 +69,15 @@ public class Company {
         if (!vehicles.contains(v)) return 0.0;
         double price = v.getValue() * (0.4 + 0.6 * (v.getCondition()/100.0));
         removeVehicle(v);
+        // Also remove assignment from driver if exists
+        Driver d = getDriverForVehicle(v);
+        if(d != null) d.setAssignedVehicle(null);
+        
         addCash(price);
         return price;
     }
 
     // Candidate pool logic
-
     public void refreshCandidatePool() {
         candidates.clear();
         int count = 3 + rng.nextInt(3); // 3-5 candidates
@@ -74,7 +97,6 @@ public class Company {
     }
 
     // Vehicle market
-
     public void refreshVehicleMarket() {
         vehicleMarket.clear();
         int count = 3 + rng.nextInt(3); // 3-5 offers
@@ -93,11 +115,15 @@ public class Company {
 
     // Job market
     public void refreshJobMarket() {
-        jobs.clear();
-        int count = 3 + rng.nextInt(3); // 3-5 jobs
+        // Keep unassigned jobs? Or flush? 
+        // Logic choice: flush unassigned, keep assigned
+        List<Job> active = new ArrayList<>();
+        for(Job j : jobs) if(j.isAssigned() && !j.isCompleted()) active.add(j);
+        jobs = active;
+        
+        int count = 3 + rng.nextInt(3); 
         for (int i = 0; i < count; i++) {
             jobs.add(Job.randomJob());
         }
     }
 }
-
