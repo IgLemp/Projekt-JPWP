@@ -8,10 +8,16 @@ public class Simulator {
     private Random rng = new Random();
     @Getter private int turn = 0;
     private List<Job> completedThisTurn = new ArrayList<>();
+    private GameSettings settings;
 
-    public Simulator() {
-        this.company = new Company(15000.0);
-        initSampleData(); // Moved init call to constructor to ensure state is ready
+    public Simulator(GameSettings settings) {
+        this.settings = settings;
+        this.company = new Company(settings.getDifficulty().getStartingCash());
+        // Apply multipliers to base logic if needed, e.g., store modifiers in Company
+        this.company.setFuelPriceMultiplier(settings.getDifficulty().getFuelCostMultiplier()); 
+        
+        // Ensure you call init here
+        initSampleData(); 
     }
 
     public List<Job> getCompletedThisTurn() { return new ArrayList<>(completedThisTurn); }

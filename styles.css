@@ -1,0 +1,82 @@
+.root {
+    -fx-font-family: 'Segoe UI', sans-serif;
+    -fx-background-color: #f4f4f9;
+}
+
+/* Start Screen specific */
+.start-screen-root {
+    -fx-background-color: linear-gradient(to bottom right, #ffffff, #e0e0e0);
+}
+
+.game-title {
+    -fx-font-size: 36px;
+    -fx-font-weight: bold;
+    -fx-fill: #333;
+}
+
+.game-subtitle {
+    -fx-font-size: 18px;
+    -fx-fill: #666;
+    -fx-font-style: italic;
+}
+
+.section-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #555;
+}
+
+.company-input {
+    -fx-font-size: 16px;
+    -fx-padding: 10;
+    -fx-background-radius: 5;
+    -fx-border-color: #ccc;
+    -fx-border-radius: 5;
+}
+
+.difficulty-card {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);
+}
+
+.difficulty-card:hover {
+    -fx-translate-y: -5;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 15, 0, 0, 10);
+}
+
+.selected-card {
+    -fx-border-color: transparent;
+    -fx-background-color: #fffbf0; /* Slight tint */
+    -fx-border-width: 2;
+}
+
+.diff-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+}
+
+.diff-desc {
+    -fx-font-size: 12px;
+    -fx-text-fill: #555;
+    -fx-alignment: center;
+}
+
+.start-button {
+    -fx-background-color: #2e7d32;
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 24;
+    -fx-background-radius: 30;
+    -fx-cursor: hand;
+}
+
+.start-button:hover {
+    -fx-background-color: #388e3c;
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}

@@ -12,6 +12,7 @@ public class Company {
     @Getter private List<Job> jobs = new ArrayList<>();
     private Map<Integer, Double> history = new HashMap<>();
     private Random rng = new Random();
+    @Getter @Setter private double fuelPriceMultiplier;
 
     // candidate pool for hires
     @Getter private List<DriverCandidate> candidates = new ArrayList<>();
