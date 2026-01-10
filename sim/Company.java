@@ -6,7 +6,8 @@ import lombok.Setter;
 
 public class Company {
     @Getter private double cash;
-    @Getter @Setter private double fuelPrice = 1.8; // per unit
+    @Getter private double reputation = 0; // Added reputation field
+    @Getter @Setter private double fuelPrice = 1.8; 
     private List<Vehicle> vehicles = new ArrayList<>();
     @Getter private List<Driver> drivers = new ArrayList<>();
     @Getter private List<Job> jobs = new ArrayList<>();
@@ -14,13 +15,15 @@ public class Company {
     private Random rng = new Random();
     @Getter @Setter private double fuelPriceMultiplier;
 
-    // candidate pool for hires
     @Getter private List<DriverCandidate> candidates = new ArrayList<>();
-    // vehicle market
     @Getter private List<VehicleOffer> vehicleMarket = new ArrayList<>();
 
     public Company(double initialCash) { this.cash = initialCash; }
+    
     public void addCash(double delta) { cash += delta; }
+    
+    // Added method to handle reputation changes
+    public void addReputation(double delta) { this.reputation += delta; }
 
     public void addVehicle(Vehicle v) { vehicles.add(v); }
     public void removeVehicle(Vehicle v) { vehicles.remove(v); }
@@ -40,8 +43,6 @@ public class Company {
     public void recordTurn(int turn) { history.put(turn, cash); }
     public Map<Integer, Double> getHistory() { return history; }
 
-    // --- LOGIC HELPERS ---
-    
     public boolean isDriverBusy(Driver d) {
         return jobs.stream().anyMatch(j -> j.isAssigned() && !j.isCompleted() && j.getAssignedDriver() == d);
     }
@@ -54,9 +55,6 @@ public class Company {
         return drivers.stream().filter(d -> d.getAssignedVehicle() == v).findFirst().orElse(null);
     }
 
-    // ---------------------
-
-    // purchase vehicle if enough cash
     public boolean purchaseVehicle(Vehicle v) {
         if (cash >= v.getValue()) {
             addCash(-v.getValue());
@@ -70,18 +68,15 @@ public class Company {
         if (!vehicles.contains(v)) return 0.0;
         double price = v.getValue() * (0.4 + 0.6 * (v.getCondition()/100.0));
         removeVehicle(v);
-        // Also remove assignment from driver if exists
         Driver d = getDriverForVehicle(v);
         if(d != null) d.setAssignedVehicle(null);
-        
         addCash(price);
         return price;
     }
 
-    // Candidate pool logic
     public void refreshCandidatePool() {
         candidates.clear();
-        int count = 3 + rng.nextInt(3); // 3-5 candidates
+        int count = 3 + rng.nextInt(3);
         for (int i = 0; i < count; i++) {
             candidates.add(DriverCandidate.randomCandidate());
         }
@@ -89,7 +84,8 @@ public class Company {
 
     public boolean hireCandidate(DriverCandidate c) {
         if (cash >= c.getHireCost()) {
-            addDriver(new Driver(c.getName(), c.getSkill()));
+            // Updated to include salary argument
+            addDriver(new Driver(c.getName(), c.getSkill(), c.getSalary()));
             addCash(-c.getHireCost());
             candidates.remove(c);
             return true;
@@ -97,10 +93,9 @@ public class Company {
         return false;
     }
 
-    // Vehicle market
     public void refreshVehicleMarket() {
         vehicleMarket.clear();
-        int count = 3 + rng.nextInt(3); // 3-5 offers
+        int count = 3 + rng.nextInt(3);
         for (int i = 0; i < count; i++) vehicleMarket.add(VehicleOffer.randomOffer());
     }
 
@@ -114,10 +109,7 @@ public class Company {
         return false;
     }
 
-    // Job market
     public void refreshJobMarket() {
-        // Keep unassigned jobs? Or flush? 
-        // Logic choice: flush unassigned, keep assigned
         List<Job> active = new ArrayList<>();
         for(Job j : jobs) if(j.isAssigned() && !j.isCompleted()) active.add(j);
         jobs = active;
