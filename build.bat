@@ -13,7 +13,7 @@ REM Adjust JavaFX SDK path below to your installation
 set JAVAFX_LIB=.\lib\javafx-sdk-25.0.1\lib
 set LOMBOK_JAR=.\lib\lombok.jar
 set SRC_DIR=.
-set BUILD_DIR=build
+set BUILD_DIR=bin
 set MAIN_CLASS=com.transport.MainApp
 
 set JFLAGS=--module-path "%JAVAFX_LIB%" --add-modules javafx.controls,javafx.graphics -cp "%LOMBOK_JAR%"

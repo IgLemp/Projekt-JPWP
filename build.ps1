@@ -1,4 +1,3 @@
-
 # Basic PowerShell build script for Transport Manager JavaFX project
 # Allows compilation and running without IDE or Gradle
 #
@@ -16,29 +15,35 @@ param(
 # Adjust JavaFX SDK path below to your installation
 $JAVAFX_LIB = ".\lib\javafx-sdk-25.0.1\lib"
 $LOMBOK_JAR = ".\lib\lombok.jar"
-$SRC_DIR = "."
-$BUILD_DIR = "build"
+$SRC_DIR = "src"
+$BUILD_DIR = "bin"
 $MAIN_CLASS = "com.transport.MainApp"
 
 $JFLAGS = "--module-path `"$JAVAFX_LIB`" --add-modules javafx.controls,javafx.graphics -cp `"$LOMBOK_JAR`""
 
 switch ($Command) {
     "compile" {
-        Write-Host "Compiling Java sources..." -ForegroundColor Cyan
+        Write-Host "Compiling Java sources from $SRC_DIR..." -ForegroundColor Cyan
         if (!(Test-Path $BUILD_DIR)) {
             New-Item -ItemType Directory -Path $BUILD_DIR | Out-Null
         }
         
-        # Find all Java files
+        # Find all Java files in src folder
         $SOURCES = Get-ChildItem -Path $SRC_DIR -Recurse -Filter "*.java" | 
                    ForEach-Object { $_.FullName }
+        
+        if ($SOURCES.Count -eq 0) {
+            Write-Host "No Java source files found in $SRC_DIR" -ForegroundColor Red
+            exit 1
+        }
         
         $sourceString = $SOURCES -join " "
         $compileCommand = "javac $JFLAGS -d `"$BUILD_DIR`" $sourceString -processorpath `"$LOMBOK_JAR`""
         
+        Write-Host "Compiling $($SOURCES.Count) source files..." -ForegroundColor Yellow
         Invoke-Expression $compileCommand
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "Build complete." -ForegroundColor Green
+            Write-Host "Build complete. Output in $BUILD_DIR" -ForegroundColor Green
         } else {
             Write-Host "Compilation failed." -ForegroundColor Red
             exit 1
@@ -64,7 +69,7 @@ switch ($Command) {
     
     default {
         Write-Host "Usage:" -ForegroundColor Yellow
-        Write-Host "  .\$($MyInvocation.MyCommand.Name) compile   # compile source files"
+        Write-Host "  .\$($MyInvocation.MyCommand.Name) compile   # compile source files from src/ to bin/"
         Write-Host "  .\$($MyInvocation.MyCommand.Name) run       # run the program"
         Write-Host "  .\$($MyInvocation.MyCommand.Name) clean     # remove build output"
     }

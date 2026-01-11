@@ -10,7 +10,7 @@
 JAVAFX_LIB ?= ./lib/javafx-sdk-25.0.1/lib
 LOMBOK_JAR ?= ./lib/lombok.jar
 SRC_DIR := .
-BUILD_DIR := build
+BUILD_DIR := bin
 MAIN_CLASS := com.transport.MainApp
 
 JFLAGS := --module-path $(JAVAFX_LIB) --add-modules javafx.controls,javafx.graphics -cp $(LOMBOK_JAR) 
