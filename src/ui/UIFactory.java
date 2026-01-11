@@ -1,6 +1,7 @@
 package com.transport.ui;
 
 import com.transport.sim.*;
+import com.transport.score.*;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,17 +14,14 @@ import javafx.scene.text.FontWeight;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class UIFactory {
 
-    // Updated signature to include onRestart callback
     public static BorderPane createMainUI(Simulator simulator, Runnable onRestart) {
         BorderPane root = new BorderPane();
-
-        // Styles
-        String btnStyle = "-fx-min-width: 120; -fx-alignment: center-left;";
 
         // Left navigation
         VBox nav = new VBox(10);
@@ -34,16 +32,26 @@ public class UIFactory {
         Button btnDrivers = new Button("Kierowcy");
         Button btnJobs = new Button("Zlecenia");
         Button btnReport = new Button("Raport");
+        Button btnRanking = new Button("Ranking"); // NOWY
         
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
         
+        Button btnEndGame = new Button("ZAKOŃCZ GRĘ"); // NOWY
+        btnEndGame.setStyle("-fx-base: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold;");
+        btnEndGame.setMaxWidth(Double.MAX_VALUE);
+        btnEndGame.setOnAction(e -> {
+            double score = new ScoreService().calculateFinalScore(simulator);
+            SaveScoreDialog.show(simulator, score);
+            onRestart.run();
+        });
+
         Button btnNext = new Button("NASTĘPNA TURA >");
         btnNext.setStyle("-fx-base: #b6e7c9; -fx-font-weight: bold;");
         btnNext.setPrefHeight(40);
         btnNext.setMaxWidth(Double.MAX_VALUE);
 
-        nav.getChildren().addAll(btnFleet, btnDrivers, btnJobs, btnReport, spacer, btnNext);
+        nav.getChildren().addAll(btnFleet, btnDrivers, btnJobs, btnReport, btnRanking, spacer, btnEndGame, btnNext);
 
         // Log area
         TextArea log = new TextArea();
@@ -63,15 +71,17 @@ public class UIFactory {
         VBox driversView = createDriversView(simulator, log);
         VBox jobsView = createJobsView(simulator, log);
         VBox reportView = createReportView(simulator, log);
+        VBox rankingView = createRankingView(simulator); // NOWY
         
-        center.getChildren().addAll(fleetView, driversView, jobsView, reportView);
-        setVisibleOnly(fleetView, driversView, jobsView, reportView);
+        center.getChildren().addAll(fleetView, driversView, jobsView, reportView, rankingView);
+        setVisibleOnly(fleetView, driversView, jobsView, reportView, rankingView);
 
         // Wiring buttons
-        btnFleet.setOnAction(e -> { setVisibleOnly(fleetView, driversView, jobsView, reportView); refreshFleetView(fleetView, simulator, log); });
-        btnDrivers.setOnAction(e -> { setVisibleOnly(driversView, fleetView, jobsView, reportView); refreshDriversView(driversView, simulator, log); });
-        btnJobs.setOnAction(e -> { setVisibleOnly(jobsView, fleetView, driversView, reportView); refreshJobsView(jobsView, simulator, log); });
-        btnReport.setOnAction(e -> { setVisibleOnly(reportView, fleetView, driversView, jobsView); refreshReportView(reportView, simulator, log); });
+        btnFleet.setOnAction(e -> { setVisibleOnly(fleetView, driversView, jobsView, reportView, rankingView); refreshFleetView(fleetView, simulator, log); });
+        btnDrivers.setOnAction(e -> { setVisibleOnly(driversView, fleetView, jobsView, reportView, rankingView); refreshDriversView(driversView, simulator, log); });
+        btnJobs.setOnAction(e -> { setVisibleOnly(jobsView, fleetView, driversView, reportView, rankingView); refreshJobsView(jobsView, simulator, log); });
+        btnReport.setOnAction(e -> { setVisibleOnly(reportView, fleetView, driversView, jobsView, rankingView); refreshReportView(reportView, simulator, log); });
+        btnRanking.setOnAction(e -> { setVisibleOnly(rankingView, fleetView, driversView, jobsView, reportView); refreshRankingView(rankingView, simulator); });
 
         btnNext.setOnAction(e -> {
             ProgressIndicator pi = new ProgressIndicator();
@@ -81,7 +91,7 @@ public class UIFactory {
             Task<String> t = new Task<>() {
                 @Override
                 protected String call() throws Exception {
-                    Thread.sleep(300); // UI feel
+                    Thread.sleep(300);
                     return simulator.nextTurn();
                 }
 
@@ -92,12 +102,9 @@ public class UIFactory {
                     log.appendText("\n-----------------\n");
                     refreshAllViews(fleetView, driversView, jobsView, reportView, simulator, log);
                     
-                    // CHECK FOR GAME OVER
                     if (simulator.isGameOver()) {
-                        btnNext.setDisable(true); // Permanently disable next turn
-                        nav.setDisable(true); // Disable navigation
-                        
-                        // Show Bankruptcy Screen Overlay
+                        btnNext.setDisable(true);
+                        nav.setDisable(true);
                         VBox bankruptcyScreen = BankruptcyScreen.create(simulator, onRestart);
                         StageUtils.showTemporaryOverlay(center, bankruptcyScreen);
                     } else {
@@ -109,7 +116,6 @@ public class UIFactory {
                 protected void failed() {
                     StageUtils.hideTemporaryOverlay(center);
                     log.appendText("Błąd krytyczny symulacji!\n");
-                    getException().printStackTrace();
                     btnNext.setDisable(false);
                 }
             };
@@ -140,7 +146,6 @@ public class UIFactory {
     private static void refreshFleetView(VBox view, Simulator sim, TextArea log) {
         view.getChildren().clear();
         view.getChildren().add(header("Twoja Flota"));
-
         ScrollPane scroll = new ScrollPane();
         VBox list = new VBox(10);
         list.setPadding(new Insets(10));
@@ -180,13 +185,10 @@ public class UIFactory {
                 if (price > 0) {
                     log.appendText(String.format("Sprzedano %s za %.2f\n", v.getName(), price));
                     refreshFleetView(view, sim, log);
-                } else {
-                    log.appendText("Nie można sprzedać pojazdu (nieznaleziony/błąd).\n");
                 }
             });
 
-            boolean busy = sim.getCompany().isVehicleBusy(v);
-            if(busy) {
+            if(sim.getCompany().isVehicleBusy(v)) {
                 btnSell.setDisable(true);
                 btnSell.setText("W trasie");
             }
@@ -197,7 +199,6 @@ public class UIFactory {
         scroll.setContent(list);
         view.getChildren().add(scroll);
 
-        // Market
         view.getChildren().add(new Separator());
         view.getChildren().add(header("Rynek Pojazdów"));
         
@@ -230,7 +231,6 @@ public class UIFactory {
     private static void refreshDriversView(VBox view, Simulator sim, TextArea log) {
         view.getChildren().clear();
         view.getChildren().add(header("Zespół Kierowców"));
-
         VBox list = new VBox(10);
         for (Driver d : sim.getCompany().getDrivers()) {
             HBox row = new HBox(15);
@@ -241,39 +241,28 @@ public class UIFactory {
             name.setPrefWidth(120);
             name.setStyle("-fx-font-weight: bold");
 
-            Label skill = new Label("Skill: " + d.getSkill());
-            skill.setPrefWidth(80);
-
             ComboBox<String> vehCombo = new ComboBox<>();
             vehCombo.getItems().add("Brak pojazdu");
-            
             List<Vehicle> availableVehicles = sim.getCompany().getVehicles().stream()
                 .filter(v -> {
                     Driver owner = sim.getCompany().getDriverForVehicle(v);
                     return owner == null || owner == d;
-                })
-                .collect(Collectors.toList());
+                }).collect(Collectors.toList());
 
             for(Vehicle v : availableVehicles) vehCombo.getItems().add(v.getName());
-            
-            String currentVehName = d.getAssignedVehicle() != null ? d.getAssignedVehicle().getName() : "Brak pojazdu";
-            vehCombo.setValue(currentVehName);
+            vehCombo.setValue(d.getAssignedVehicle() != null ? d.getAssignedVehicle().getName() : "Brak pojazdu");
 
             Button btnAssign = new Button("Zmień");
-            
-            boolean isWorking = sim.getCompany().isDriverBusy(d);
-            if (isWorking) {
+            if (sim.getCompany().isDriverBusy(d)) {
                 vehCombo.setDisable(true);
                 btnAssign.setDisable(true);
                 btnAssign.setText("W trasie");
-                row.setStyle("-fx-background-color: #fff0f0; -fx-padding: 8; -fx-border-color: #eebbbb;");
             }
 
             btnAssign.setOnAction(e -> {
                 String selected = vehCombo.getValue();
-                if (selected == null || selected.equals("Brak pojazdu")) {
-                    d.setAssignedVehicle(null);
-                } else {
+                if (selected == null || selected.equals("Brak pojazdu")) d.setAssignedVehicle(null);
+                else {
                     Vehicle v = sim.getCompany().getVehicles().stream()
                         .filter(vh -> vh.getName().equals(selected)).findFirst().orElse(null);
                     d.setAssignedVehicle(v);
@@ -287,36 +276,24 @@ public class UIFactory {
                      sim.getCompany().addCash(-50);
                      d.train(5);
                      refreshDriversView(view, sim, log);
-                 } else {
-                     log.appendText("Brak środków na szkolenie.\n");
                  }
             });
 
-            row.getChildren().addAll(name, skill, new Label("Pojazd:"), vehCombo, btnAssign, btnTrain);
+            row.getChildren().addAll(name, new Label("Skill: " + d.getSkill()), new Label("Pojazd:"), vehCombo, btnAssign, btnTrain);
             list.getChildren().add(row);
         }
         view.getChildren().add(list);
-
         view.getChildren().add(new Separator());
         view.getChildren().add(header("Giełda Pracy (Kandydaci)"));
-        
         for(DriverCandidate c : sim.getCompany().getCandidates()) {
             HBox row = new HBox(15);
             row.setAlignment(Pos.CENTER_LEFT);
-            row.getChildren().addAll(
-                new Label(c.getName()), 
-                new Label("Skill: " + c.getSkill()), 
-                new Label("Koszt: $" + c.getHireCost()),
-                new Label("Pensja: $" + c.getSalary()),
+            row.getChildren().addAll(new Label(c.getName()), new Label("Skill: " + c.getSkill()), 
                 button("Zatrudnij", () -> {
                     if (sim.getCompany().hireCandidate(c)) {
                         refreshDriversView(view, sim, log);
-                        log.appendText("Zatrudniono: " + c.getName() + "\n");
-                    } else {
-                        log.appendText("Za mało gotówki!\n");
                     }
-                })
-            );
+                }));
             view.getChildren().add(row);
         }
     }
@@ -327,7 +304,6 @@ public class UIFactory {
     private static void refreshJobsView(VBox view, Simulator sim, TextArea log) {
         view.getChildren().clear();
         view.getChildren().add(header("Dostępne Zlecenia"));
-
         List<Driver> availableDrivers = sim.getCompany().getDrivers().stream()
             .filter(d -> d.hasVehicle() && !sim.getCompany().isDriverBusy(d))
             .collect(Collectors.toList());
@@ -336,50 +312,22 @@ public class UIFactory {
             HBox row = new HBox(12);
             row.setAlignment(Pos.CENTER_LEFT);
             row.setPadding(new Insets(5));
-            
             if (j.isAssigned()) {
-                row.setStyle("-fx-background-color: #e8f5e9; -fx-border-color: #c8e6c9; -fx-border-width: 1;");
-                Label lbl = new Label(String.format("%s | %s [ETA: %d]", j.getTitle(), j.getAssignedDriver().getName(), j.getTurnsRemaining()));
-                lbl.setStyle("-fx-font-weight: bold; -fx-text-fill: #2e7d32;");
-                row.getChildren().add(lbl);
+                row.setStyle("-fx-background-color: #e8f5e9;");
+                row.getChildren().add(new Label(j.getTitle() + " | " + j.getAssignedDriver().getName() + " [ETA: " + j.getTurnsRemaining() + "]"));
             } else {
-                row.setStyle("-fx-background-color: white; -fx-border-color: #eee; -fx-border-width: 1;");
-                
-                VBox details = new VBox(
-                    new Label(j.getTitle()),
-                    new Label(String.format("%d km | Nagroda: $%.0f | Min. Skill: %d", 
-                        j.getRouteLength(), j.getReward(), j.getMinSkillRequired()))
-                );
+                VBox details = new VBox(new Label(j.getTitle()), new Label("Dystans: " + j.getRouteLength() + " km"));
                 details.setPrefWidth(250);
-
-                ComboBox<Driver> drvCombo = new ComboBox<>();
-                drvCombo.setItems(FXCollections.observableArrayList(availableDrivers));
-                drvCombo.setCellFactory(p -> new ListCell<>() {
-                    @Override protected void updateItem(Driver item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (empty || item == null) setText(null);
-                        else setText(item.getName() + " (" + item.getAssignedVehicle().getName() + ")");
-                    }
-                });
-                drvCombo.setButtonCell(drvCombo.getCellFactory().call(null)); 
+                ComboBox<Driver> drvCombo = new ComboBox<>(FXCollections.observableArrayList(availableDrivers));
                 drvCombo.setPromptText("Wybierz kierowcę...");
-                drvCombo.setPrefWidth(200);
-
                 Button btnStart = new Button("Start");
                 btnStart.setOnAction(e -> {
                     Driver d = drvCombo.getValue();
-                    if (d == null) {
-                        log.appendText("Wybierz kierowcę!\n");
-                        return;
+                    if (d != null) {
+                        j.assign(d, d.getAssignedVehicle());
+                        refreshJobsView(view, sim, log);
                     }
-                    if (d.getSkill() < j.getMinSkillRequired()) {
-                        log.appendText("Ostrzeżenie: Niski skill kierowcy zwiększa ryzyko!\n");
-                    }
-                    j.assign(d, d.getAssignedVehicle());
-                    log.appendText("Rozpoczęto: " + j.getTitle() + "\n");
-                    refreshJobsView(view, sim, log);
                 });
-
                 row.getChildren().addAll(details, drvCombo, btnStart);
             }
             view.getChildren().add(row);
@@ -392,35 +340,46 @@ public class UIFactory {
     private static void refreshReportView(VBox view, Simulator sim, TextArea log) {
         view.getChildren().clear();
         view.getChildren().add(header("Podsumowanie Finansowe"));
-
         Label lCash = new Label(String.format("Gotówka: $%.2f", sim.getCompany().getCash()));
         lCash.setFont(Font.font("System", FontWeight.BOLD, 16));
-        lCash.setTextFill(sim.getCompany().getCash() < 0 ? Color.RED : Color.BLACK);
-
-        view.getChildren().addAll(
-            lCash, 
-            new Label("Tura: " + sim.getTurn()),
-            new Label(String.format("Reputacja: %.1f", sim.getCompany().getReputation())),
-            new Label(String.format("Cena paliwa: $%.2f", sim.getCompany().getFuelPrice()))
-        );
-
-        view.getChildren().add(new Separator());
-        view.getChildren().add(new Label("Historia ostatnich zleceń:"));
+        view.getChildren().addAll(lCash, new Label("Tura: " + sim.getTurn()), new Label("Reputacja: " + sim.getCompany().getReputation()));
         
         TableView<JobRow> table = new TableView<>();
         TableColumn<JobRow, String> cName = new TableColumn<>("Zlecenie"); cName.setCellValueFactory(new PropertyValueFactory<>("title"));
         TableColumn<JobRow, String> cRes = new TableColumn<>("Wynik"); cRes.setCellValueFactory(new PropertyValueFactory<>("result"));
-        cName.setPrefWidth(200);
-        cRes.setPrefWidth(300);
-        
         table.getColumns().addAll(cName, cRes);
         
         ObservableList<JobRow> data = FXCollections.observableArrayList();
-        for(Job j : sim.getCompletedThisTurn()) {
-            data.add(new JobRow(j.getTitle(), j.getResult()));
-        }
+        for(Job j : sim.getCompletedThisTurn()) data.add(new JobRow(j.getTitle(), j.getResult()));
         table.setItems(data);
-        table.setPlaceholder(new Label("Brak zakończonych zleceń w tej turze"));
+        view.getChildren().add(table);
+    }
+
+    // ================= RANKING VIEW (NOWY) =================
+    private static VBox createRankingView(Simulator sim) {
+        VBox view = new VBox(15);
+        view.setPadding(new Insets(10));
+        refreshRankingView(view, sim);
+        return view;
+    }
+
+    private static void refreshRankingView(VBox view, Simulator sim) {
+        view.getChildren().clear();
+        view.getChildren().add(header("NAJLEPSZE WYNIKI (TOP 10)"));
+        
+        TableView<ScoreRecord> table = new TableView<>();
+        TableColumn<ScoreRecord, String> colName = new TableColumn<>("Gracz");
+        colName.setCellValueFactory(new PropertyValueFactory<>("playerName"));
+        colName.setPrefWidth(150);
+        
+        TableColumn<ScoreRecord, Double> colScore = new TableColumn<>("Wynik");
+        colScore.setCellValueFactory(new PropertyValueFactory<>("finalScore"));
+        
+        TableColumn<ScoreRecord, Integer> colTurns = new TableColumn<>("Tury");
+        colTurns.setCellValueFactory(new PropertyValueFactory<>("turnsReached"));
+
+        table.getColumns().addAll(colName, colScore, colTurns);
+        table.getItems().setAll(new ScoreService().loadScores(new File(".")));
         
         view.getChildren().add(table);
     }
