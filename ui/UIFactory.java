@@ -1,9 +1,6 @@
 package com.transport.ui;
 
 import com.transport.sim.*;
-import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,13 +10,16 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class UIFactory {
 
-    public static BorderPane createMainUI(Simulator simulator) {
+    // Updated signature to include onRestart callback
+    public static BorderPane createMainUI(Simulator simulator, Runnable onRestart) {
         BorderPane root = new BorderPane();
 
         // Styles
@@ -91,7 +91,18 @@ public class UIFactory {
                     log.appendText(getValue());
                     log.appendText("\n-----------------\n");
                     refreshAllViews(fleetView, driversView, jobsView, reportView, simulator, log);
-                    btnNext.setDisable(false);
+                    
+                    // CHECK FOR GAME OVER
+                    if (simulator.isGameOver()) {
+                        btnNext.setDisable(true); // Permanently disable next turn
+                        nav.setDisable(true); // Disable navigation
+                        
+                        // Show Bankruptcy Screen Overlay
+                        VBox bankruptcyScreen = BankruptcyScreen.create(simulator, onRestart);
+                        StageUtils.showTemporaryOverlay(center, bankruptcyScreen);
+                    } else {
+                        btnNext.setDisable(false);
+                    }
                 }
 
                 @Override
@@ -124,10 +135,7 @@ public class UIFactory {
     }
 
     // ================= FLEET VIEW =================
-    private static VBox createFleetView(Simulator sim, TextArea log) {
-        VBox box = new VBox(10);
-        return box;
-    }
+    private static VBox createFleetView(Simulator sim, TextArea log) { return new VBox(10); }
 
     private static void refreshFleetView(VBox view, Simulator sim, TextArea log) {
         view.getChildren().clear();
@@ -169,11 +177,14 @@ public class UIFactory {
             Button btnSell = new Button("Sprzedaj");
             btnSell.setOnAction(e -> {
                 double price = sim.getCompany().sellVehicle(v);
-                log.appendText(String.format("Sprzedano %s za %.2f\n", v.getName(), price));
-                refreshFleetView(view, sim, log);
+                if (price > 0) {
+                    log.appendText(String.format("Sprzedano %s za %.2f\n", v.getName(), price));
+                    refreshFleetView(view, sim, log);
+                } else {
+                    log.appendText("Nie można sprzedać pojazdu (nieznaleziony/błąd).\n");
+                }
             });
 
-            // Cannot sell if assigned to active job
             boolean busy = sim.getCompany().isVehicleBusy(v);
             if(busy) {
                 btnSell.setDisable(true);
@@ -214,9 +225,7 @@ public class UIFactory {
     }
 
     // ================= DRIVERS VIEW =================
-    private static VBox createDriversView(Simulator sim, TextArea log) {
-        return new VBox(10);
-    }
+    private static VBox createDriversView(Simulator sim, TextArea log) { return new VBox(10); }
 
     private static void refreshDriversView(VBox view, Simulator sim, TextArea log) {
         view.getChildren().clear();
@@ -235,11 +244,9 @@ public class UIFactory {
             Label skill = new Label("Skill: " + d.getSkill());
             skill.setPrefWidth(80);
 
-            // Vehicle Assignment Logic
             ComboBox<String> vehCombo = new ComboBox<>();
             vehCombo.getItems().add("Brak pojazdu");
             
-            // Available vehicles: those not assigned to ANYONE else, OR the one currently assigned to THIS driver
             List<Vehicle> availableVehicles = sim.getCompany().getVehicles().stream()
                 .filter(v -> {
                     Driver owner = sim.getCompany().getDriverForVehicle(v);
@@ -254,7 +261,6 @@ public class UIFactory {
 
             Button btnAssign = new Button("Zmień");
             
-            // Check if driver is currently WORKING. If so, lock assignment.
             boolean isWorking = sim.getCompany().isDriverBusy(d);
             if (isWorking) {
                 vehCombo.setDisable(true);
@@ -265,7 +271,7 @@ public class UIFactory {
 
             btnAssign.setOnAction(e -> {
                 String selected = vehCombo.getValue();
-                if (selected.equals("Brak pojazdu")) {
+                if (selected == null || selected.equals("Brak pojazdu")) {
                     d.setAssignedVehicle(null);
                 } else {
                     Vehicle v = sim.getCompany().getVehicles().stream()
@@ -281,6 +287,8 @@ public class UIFactory {
                      sim.getCompany().addCash(-50);
                      d.train(5);
                      refreshDriversView(view, sim, log);
+                 } else {
+                     log.appendText("Brak środków na szkolenie.\n");
                  }
             });
 
@@ -299,9 +307,11 @@ public class UIFactory {
                 new Label(c.getName()), 
                 new Label("Skill: " + c.getSkill()), 
                 new Label("Koszt: $" + c.getHireCost()),
+                new Label("Pensja: $" + c.getSalary()),
                 button("Zatrudnij", () -> {
                     if (sim.getCompany().hireCandidate(c)) {
                         refreshDriversView(view, sim, log);
+                        log.appendText("Zatrudniono: " + c.getName() + "\n");
                     } else {
                         log.appendText("Za mało gotówki!\n");
                     }
@@ -318,7 +328,6 @@ public class UIFactory {
         view.getChildren().clear();
         view.getChildren().add(header("Dostępne Zlecenia"));
 
-        // Only list drivers who have a vehicle and are NOT currently busy
         List<Driver> availableDrivers = sim.getCompany().getDrivers().stream()
             .filter(d -> d.hasVehicle() && !sim.getCompany().isDriverBusy(d))
             .collect(Collectors.toList());
@@ -328,26 +337,23 @@ public class UIFactory {
             row.setAlignment(Pos.CENTER_LEFT);
             row.setPadding(new Insets(5));
             
-            // Visual style for active/assigned jobs
             if (j.isAssigned()) {
                 row.setStyle("-fx-background-color: #e8f5e9; -fx-border-color: #c8e6c9; -fx-border-width: 1;");
                 Label lbl = new Label(String.format("%s | %s [ETA: %d]", j.getTitle(), j.getAssignedDriver().getName(), j.getTurnsRemaining()));
                 lbl.setStyle("-fx-font-weight: bold; -fx-text-fill: #2e7d32;");
                 row.getChildren().add(lbl);
             } else {
-                // Unassigned Job
                 row.setStyle("-fx-background-color: white; -fx-border-color: #eee; -fx-border-width: 1;");
                 
                 VBox details = new VBox(
                     new Label(j.getTitle()),
-                    new Label(String.format("%d km | Nagroda: $%.0f", j.getRouteLength(), j.getReward()))
+                    new Label(String.format("%d km | Nagroda: $%.0f | Min. Skill: %d", 
+                        j.getRouteLength(), j.getReward(), j.getMinSkillRequired()))
                 );
                 details.setPrefWidth(250);
 
-                // Driver selector (Implied Vehicle)
                 ComboBox<Driver> drvCombo = new ComboBox<>();
                 drvCombo.setItems(FXCollections.observableArrayList(availableDrivers));
-                // Define how drivers look in combo
                 drvCombo.setCellFactory(p -> new ListCell<>() {
                     @Override protected void updateItem(Driver item, boolean empty) {
                         super.updateItem(item, empty);
@@ -355,7 +361,7 @@ public class UIFactory {
                         else setText(item.getName() + " (" + item.getAssignedVehicle().getName() + ")");
                     }
                 });
-                drvCombo.setButtonCell(drvCombo.getCellFactory().call(null)); // for selected item view
+                drvCombo.setButtonCell(drvCombo.getCellFactory().call(null)); 
                 drvCombo.setPromptText("Wybierz kierowcę...");
                 drvCombo.setPrefWidth(200);
 
@@ -365,6 +371,9 @@ public class UIFactory {
                     if (d == null) {
                         log.appendText("Wybierz kierowcę!\n");
                         return;
+                    }
+                    if (d.getSkill() < j.getMinSkillRequired()) {
+                        log.appendText("Ostrzeżenie: Niski skill kierowcy zwiększa ryzyko!\n");
                     }
                     j.assign(d, d.getAssignedVehicle());
                     log.appendText("Rozpoczęto: " + j.getTitle() + "\n");
@@ -391,6 +400,7 @@ public class UIFactory {
         view.getChildren().addAll(
             lCash, 
             new Label("Tura: " + sim.getTurn()),
+            new Label(String.format("Reputacja: %.1f", sim.getCompany().getReputation())),
             new Label(String.format("Cena paliwa: $%.2f", sim.getCompany().getFuelPrice()))
         );
 
@@ -415,7 +425,6 @@ public class UIFactory {
         view.getChildren().add(table);
     }
 
-    // Helpers
     private static Label header(String text) {
         Label l = new Label(text);
         l.setFont(Font.font("System", FontWeight.BOLD, 14));

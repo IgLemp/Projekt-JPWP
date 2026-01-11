@@ -1,58 +1,61 @@
 package com.transport;
 
-import com.transport.ui.UIFactory;
-import com.transport.ui.StartScreen;
+import com.transport.sim.GameSettings;
 import com.transport.sim.Simulator;
-import com.transport.sim.Vehicle;
+import com.transport.ui.StartScreen;
+import com.transport.ui.UIFactory;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 
 public class MainApp extends Application {
-    private Simulator simulator;
+
+    private Stage primaryStage;
 
     @Override
     public void start(Stage primaryStage) {
-    // Load CSS
-    // Application.setUserAgentStylesheet(getClass().getResource("./styles.css").toExternalForm());
+        this.primaryStage = primaryStage;
+        this.primaryStage.setTitle("Transport Manager Tycoon");
+        showStartScreen();
+    }
 
-    StartScreen startScreen = new StartScreen();
+    /**
+     * Displays the initial Start/Configuration screen.
+     */
+    private void showStartScreen() {
+        StartScreen startScreen = new StartScreen();
+        
+        // callback: when user clicks "Start Game", run startGame() with their settings
+        Region content = startScreen.createContent(this::startGame);
+        
+        Scene scene = new Scene(content, 900, 700);
+        // Load CSS if available (optional)
+        if (getClass().getResource("/style.css") != null) {
+            scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        }
+        
+        primaryStage.setScene(scene);
+        primaryStage.show();
+    }
 
-    // The callback determines what happens when user clicks "Start"
-    Scene startScene = new Scene(startScreen.createContent(settings -> {
-        // 1. User clicked start
-        System.out.println("Starting game: " + settings.getDifficulty());
-
-        // 2. Initialize Simulator with settings
+    /**
+     * Initializes the Simulator and switches to the Main Game UI.
+     */
+    private void startGame(GameSettings settings) {
         Simulator sim = new Simulator(settings);
-
-        // 3. Create Main Game UI
-        BorderPane gameRoot = UIFactory.createMainUI(sim);
         
-        // 4. Switch Scene
-        Scene gameScene = new Scene(gameRoot, 1024, 768);
+        // FIX: Passed 'this::showStartScreen' as the second argument.
+        // This is the Runnable that the BankruptcyScreen will execute to restart the game.
+        BorderPane gameRoot = UIFactory.createMainUI(sim, this::showStartScreen);
         
-        // Apply CSS to game scene as well if needed
-        // gameScene.getStylesheets().add(...);
-        
-        primaryStage.setScene(gameScene);
+        Scene scene = new Scene(gameRoot, 1024, 768);
+        primaryStage.setScene(scene);
         primaryStage.centerOnScreen();
-    }), 900, 600);
-    
-    // Attempt to load CSS if file exists
-    try {
-        startScene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
-    } catch (Exception e) {
-        System.out.println("CSS file not found, using default styles");
     }
 
-    primaryStage.setTitle("Transport Manager 2026");
-    primaryStage.setScene(startScene);
-    primaryStage.show();
-}
     public static void main(String[] args) {
-        launch();
+        launch(args);
     }
 }
-
